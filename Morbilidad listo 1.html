@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dirección Médica - Morbilidad de Pacientes</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .table-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .table-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .table-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #recipeImpresion:not(.hidden), #recipeImpresion:not(.hidden) * {
+                visibility: visible !important;
+            }
+            #recipeImpresion:not(.hidden) {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+                color: #000 !important;
+                background: #fff !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-2 sm:p-4">
+
+    <!-- MODAL DE LOGIN / ACCESO DOCTOR POR CÉDULA -->
+    <div id="modalLogin" class="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="text-center">
+                <span class="text-3xl mb-2 inline-block">👨‍⚕️</span>
+                <h2 class="text-xl font-bold text-teal-300 uppercase">Acceso de Médico / Turno</h2>
+                <p class="text-xs text-slate-400 mt-1">Ingrese su Cédula y Contraseña autorizada para ingresar.</p>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Cédula del Médico:</label>
+                    <input type="text" id="loginCedula" placeholder="Ingrese su Cedula" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-teal-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña:</label>
+                    <input type="password" id="loginClave" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 focus:ring-1 focus:ring-teal-500">
+                </div>
+                
+                <button onclick="iniciarSesionDoctor()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-lg text-sm transition cursor-pointer">
+                    Iniciar Sesión / Cargar Turno
+                </button>
+
+                <!-- BOTÓN OCULTO PARA ACCESO DE ADMINISTRADOR -->
+                <div class="pt-4 border-t border-slate-800 text-center">
+                    <button onclick="abrirModalAdmin()" class="text-[11px] text-slate-500 hover:text-slate-300 transition underline cursor-pointer">
+                        🔒 Panel de Administración (Crear Cuentas de Médicos)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ADMINISTRACIÓN (CREAR CUENTAS) -->
+    <div id="modalAdmin" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-amber-600/50 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="text-center">
+                <span class="text-2xl mb-1 inline-block">🛡️</span>
+                <h3 class="text-base font-bold text-amber-400 uppercase">Panel de Administración</h3>
+                <p class="text-xs text-slate-400">Autorizar y registrar nueva cuenta de médico</p>
+            </div>
+
+            <!-- CRONÓMETRO VISUAL DE 24 HORAS -->
+            <div class="text-xs text-teal-400 font-mono bg-slate-950 px-3 py-1.5 rounded border border-slate-700 flex items-center justify-between">
+                <span>⏱️ Próximo envío automático:</span>
+                <span id="cronometroTurno" class="font-bold text-amber-300">24:00:00</span>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">PIN de Administrador:</label>
+                    <input type="password" id="adminPin" placeholder="PIN Secreto" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100">
+                </div>
+                <hr class="border-slate-800">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Cédula del Nuevo Médico:</label>
+                    <input type="text" id="adminNuevaCedula" placeholder="Ingrese su Cedula" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre Completo del Doctor:</label>
+                    <input type="text" id="adminNuevoNombre" placeholder="ingrese el nombre del Dr/Dra" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña Asignada:</label>
+                    <input type="password" id="adminNuevaClave" placeholder="Contraseña temporal" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="cerrarModalAdmin()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded text-xs">Cancelar</button>
+                    <button onclick="crearCuentaPorAdmin()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded text-xs">Crear Cuenta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto bg-slate-900 rounded-xl border border-slate-800 overflow-hidden no-print">
+        
+        <!-- INSTITUTIONAL HEADER -->
+        <header class="bg-slate-900 text-white p-3 sm:p-4 border-b-2 border-teal-500 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-slate-800 rounded-lg border border-slate-700 text-lg">
+                        👨‍⚕️
+                    </div>
+                    <div class="text-left">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Médico Tratante</span>
+                        <h2 id="labelDoctorActivo" class="text-sm font-semibold text-teal-300">Dr. No identificado</h2>
+                    </div>
+                </div>
+
+                <div class="text-center flex-1 px-1">
+                    <h1 class="text-xs sm:text-base font-bold uppercase tracking-tight text-teal-300 leading-snug">
+                        DIRECCIÓN MÉDICA / MORBILIDAD DE PACIENTES
+                    </h1>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="abrirModalCambiarClave()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-700">🔑 Clave</button>
+                    <button onclick="cerrarSesionDoctor()" class="bg-rose-600/80 hover:bg-rose-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="p-4 space-y-5">
+
+            <!-- INFORMACIÓN GENERAL DEL TURNO -->
+            <section class="bg-slate-800 rounded-lg p-4 border border-teal-500/40">
+                <h2 class="text-xs sm:text-sm font-bold text-teal-400 uppercase mb-3 flex items-center gap-2">
+                    Información General del Turno
+                </h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                    <div>
+                        <label for="fechaTurno" class="block text-xs font-semibold text-slate-300 mb-1">Fecha</label>
+                        <input type="date" id="fechaTurno" onchange="guardarCabecera()" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-100">
+                    </div>
+                    <div>
+                        <label for="ambulatorio" class="block text-xs font-semibold text-slate-300 mb-1">Ambulatorio</label>
+                        <input type="text" id="ambulatorio" oninput="guardarCabecera()" placeholder="Ingrese el Nombre del Ambulatorio" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-100">
+                    </div>
+                    <div>
+                        <label for="medico" class="block text-xs font-semibold text-slate-300 mb-1">Médico Tratante</label>
+                        <input type="text" id="medico" oninput="guardarCabecera()" placeholder="Nombre del Médico" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-100">
+                    </div>
+                    <div>
+                        <label for="enfermeria" class="block text-xs font-semibold text-slate-300 mb-1">Personal de Enfermería</label>
+                        <input type="text" id="enfermeria" oninput="guardarCabecera()" placeholder="Nombres del/la Enfermero(a)" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-100">
+                    </div>
+                </div>
+            </section>
+
+            <!-- FORMULARIO DE REGISTRO DE PACIENTES -->
+            <form id="formPaciente" onsubmit="agregarPaciente(event)" class="bg-slate-800/80 rounded-lg border border-slate-700 p-4 space-y-4">
+                <h2 class="text-xs sm:text-sm font-bold text-slate-200 uppercase pb-2 border-b border-slate-700">
+                    Datos del Paciente y Consulta <span class="text-xs text-rose-400 font-normal"></span>
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div>
+                        <label for="horaIngreso" class="block text-xs font-semibold text-slate-300 mb-1">Hora Ingreso</label>
+                        <input type="time" id="horaIngreso" required class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="cedula" class="block text-xs font-semibold text-slate-300">Cédula</label>
+                            <label class="inline-flex items-center text-[11px] text-teal-400 cursor-pointer">
+                                <input type="checkbox" id="pEsMenor" onchange="toggleMenorEdad()" class="mr-1 rounded"> Menor
+                            </label>
+                        </div>
+                        <input type="text" id="cedula" required placeholder="Cédula (Busca historial)" maxlength="8" oninput="this.value = this.value.replace(/[^0-9]/g, ''); buscarHistorialPaciente();" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                        <p id="menorHelpText" class="hidden text-[10px] text-amber-400 mt-0.5">Se asignará sufijo de menor (-H1)</p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="nombrePaciente" class="block text-xs font-semibold text-slate-300 mb-1">Nombres y Apellidos</label>
+                        <input type="text" id="nombrePaciente" required placeholder="Nombre completo" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                    </div>
+                    <div>
+                        <label for="fechaNacimiento" class="block text-xs font-semibold text-slate-300 mb-1">Fecha Nacimiento</label>
+                        <input type="date" id="fechaNacimiento" onchange="calcularEdadDesdeFecha()" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                    </div>
+                    <div>
+                        <label for="edad" class="block text-xs font-semibold text-slate-300 mb-1">Edad</label>
+                        <input type="text" id="edad" required placeholder="•••" maxlength="3" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Genero</label>
+                        <div class="flex items-center gap-4 py-1.5 px-3 bg-slate-950 rounded border border-slate-700">
+                            <label class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-200 cursor-pointer"><input type="radio" name="sexo" value="M" required> M</label>
+                            <label class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-200 cursor-pointer"><input type="radio" name="sexo" value="F" required> F</label>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="direccion" class="block text-xs font-semibold text-slate-300 mb-1">Ubicación</label>
+                        <input type="text" id="direccion" placeholder="Comunidad / Sector" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                    </div>
+                    <div>
+                        <label for="telefono" class="block text-xs font-semibold text-teal-300 mb-1">📞 Teléfono</label>
+                        <input type="text" id="telefono" placeholder="Ingrese el numero de telefono" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full bg-slate-950 border border-teal-500/50 rounded px-2.5 py-1.5 text-sm text-emerald-300 font-semibold">
+                    </div>
+                </div>
+
+                <!-- PROCEDERES DE ENFERMERÍA -->
+                <div class="bg-slate-900 rounded p-3 border border-slate-700">
+                    <span class="block text-xs font-bold text-teal-400 uppercase mb-2">Procederes de Enfermería</span>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                        <div><label class="text-[11px] text-slate-400">Peso (kg):</label><input type="text" id="peso" placeholder="70.5" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                        <div><label class="text-[11px] text-slate-400">Talla (cm):</label><input type="text" id="talla" placeholder="165" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                        <div><label class="text-[11px] text-slate-400">G.C:</label><input type="text" id="gc" placeholder="90" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                        <div><label class="text-[11px] text-slate-400">F.C:</label><input type="text" id="fc" placeholder="72" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                        <div><label class="text-[11px] text-slate-400">SpO2:</label><input type="text" id="spo2" placeholder="98" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                        <div><label class="text-[11px] text-slate-400">Temperatura:</label><input type="text" id="temp" placeholder="36.5" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                        <div><label class="text-[11px] text-slate-400">P.A:</label><input type="text" id="pa" placeholder="120/80" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-100"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="md:col-span-2 space-y-3">
+                        <div>
+                            <label for="examenFisico" class="block text-xs font-semibold text-teal-300 mb-1">🔍 Examen Físico / Hallazgos:</label>
+                            <input type="text" id="examenFisico" placeholder="Ingrese examen fisico" class="w-full bg-slate-950 border border-teal-500/40 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                        </div>
+                        <div>
+                            <label for="diagnostico" class="block text-xs font-semibold text-slate-300 mb-1">Diagnóstico:</label>
+                            <input type="text" id="diagnostico" required placeholder="Descripción del diagnóstico" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="especialidad" class="block text-xs font-semibold text-slate-300 mb-1">Especialidad:</label>
+                        <select id="especialidad" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                            <option value="Medicina Interna">Medicina Interna</option>
+                            <option value="Pediatría">Pediatría</option>
+                            <option value="Ginecología">Ginecología</option>
+                            <option value="Psicologia Adulto">Psicologia Adulto</option>
+                            <option value="Psicologia Infantil">Psicologia Infantil</option>
+                            <option value="Fisiatria">Fisiatria</option>
+                            <option value="Geriatria">Geriatria</option>
+                            <option value="Traumatologia">Traumatologia</option>
+                            <option value="Enfermeria">Enfermeria</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-amber-950/30 rounded p-3 border border-amber-600/40">
+                    <label for="tratamiento" class="block text-xs font-bold text-amber-300 mb-1 uppercase">💊 Tratamiento:</label>
+                    <textarea id="tratamiento" rows="3" placeholder="Escriba los medicamentos" class="w-full bg-slate-950 border border-amber-600/40 rounded px-3 py-2 text-sm text-slate-100"></textarea>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-3 border-t border-slate-700">
+                    <div>
+                        <label for="horaSalida" class="block text-xs font-semibold text-slate-300 mb-1">Hora de Salida</label>
+                        <input type="time" id="horaSalida" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-sm text-slate-100">
+                    </div>
+                    <div class="flex flex-wrap gap-3 w-full sm:w-auto justify-end">
+                        <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs">Registrar Paciente</button>
+                        <button type="button" onclick="enviarDirectoAGoogleSheets()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs">📊 Enviar a Google Sheets</button>
+                    </div>
+                </div>
+            </form>
+
+            <section class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden space-y-3 p-4">
+                <div class="flex flex-wrap items-center justify-between pb-2 border-b border-slate-800 gap-2">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-200">Pacientes Atendidos en el Turno</h3>
+                        <p class="text-xs text-slate-400">Total Pacientes: <span id="contadorPacientes" class="font-bold text-emerald-400">0</span></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="descargarRespaldoJSON()" class="bg-blue-600/80 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">💾 Descargar Respaldo</button>
+                        <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-700 cursor-pointer">
+                            📂 Cargar Respaldo <input type="file" id="inputRestaurar" accept=".json" onchange="restaurarRespaldoJSON(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto table-scrollbar border border-slate-800 rounded-lg max-h-96">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-slate-950 text-slate-300 sticky top-0 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="p-2.5 border-r border-slate-800 text-center">N°</th>
+                                <th class="p-2.5 border-r border-slate-800">Hora</th>
+                                <th class="p-2.5 border-r border-slate-800">Nombres y Apellidos</th>
+                                <th class="p-2.5 border-r border-slate-800">Cédula</th>
+                                <th class="p-2.5 border-r border-slate-800">Edad</th>
+                                <th class="p-2.5 border-r border-slate-800 text-center">Sexo</th>
+                                <th class="p-2.5 border-r border-slate-800">Examen Físico / Signos</th>
+                                <th class="p-2.5 border-r border-slate-800">Ubicación / Comunidad</th>
+                                <th class="p-2.5 border-r border-slate-800 text-emerald-400">Teléfono</th>
+                                <th class="p-2.5 border-r border-slate-800">Diagnóstico</th>
+                                <th class="p-2.5 border-r border-slate-800">Tratamiento</th>
+                                <th class="p-2.5 border-r border-slate-800">Especialidad</th>
+                                <th class="p-2.5 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaPacientes" class="divide-y divide-slate-800/60 bg-slate-900/50">
+                            <tr><td colspan="13" class="p-6 text-center text-slate-500 italic">No hay pacientes registrados en este turno.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ÁREA IMPRESIÓN RÉCIPE -->
+    <div id="recipeImpresion" class="hidden bg-white p-6 max-w-2xl mx-auto border-2 border-slate-800 rounded text-slate-900">
+        <div class="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-4">
+            <div class="text-left">
+                <h2 class="font-bold text-lg uppercase text-slate-800">Dirección Médica de Salud</h2>
+                <p class="text-xs font-semibold text-slate-600">Municipio Guaicaipuro - Red de Ambulatorios</p>
+                <p id="recipeAmbulatorio" class="text-xs text-slate-500 font-medium"></p>
+            </div>
+            <div class="text-right text-xs text-slate-600">
+                <p>Fecha: <span id="recipeFecha" class="font-bold"></span></p>
+                <p>Médico: <span id="recipeMedico" class="font-bold"></span></p>
+            </div>
+        </div>
+        <div class="bg-slate-100 p-3 rounded mb-4 text-xs space-y-1 border border-slate-300">
+            <p><strong>Paciente:</strong> <span id="recipeNombre"></span></p>
+            <p><strong>Cédula:</strong> <span id="recipeCedula"></span> | <strong>Edad:</strong> <span id="recipeEdad"></span> | <strong>Sexo:</strong> <span id="recipeSexo"></span></p>
+            <p><strong>Examen Físico:</strong> <span id="recipeExamen"></span></p>
+            <p><strong>Diagnóstico:</strong> <span id="recipeDiagnostico"></span></p>
+        </div>
+        <div class="mb-8">
+            <h3 class="text-xs font-bold uppercase text-slate-700 border-b pb-1 mb-2">Indicaciones Médicas / Tratamiento</h3>
+            <div id="recipeTratamiento" class="text-sm text-slate-900 whitespace-pre-wrap font-mono bg-amber-50 p-3 rounded border border-amber-200 min-h-[120px]"></div>
+        </div>
+        <div class="pt-12 flex justify-around text-center text-xs">
+            <div class="border-t border-slate-400 w-48 pt-1"><p class="font-bold text-slate-700">Firma / Sello del Médico</p></div>
+        </div>
+        <div class="mt-6 flex flex-wrap justify-center gap-2 no-print">
+            <button onclick="window.print()" class="bg-teal-600 text-white font-bold px-4 py-2 rounded text-xs">🖨️ Imprimir</button>
+            <button onclick="enviarRecipeWhatsAppDirecto()" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded text-xs">📱 Enviar por WhatsApp</button>
+            <button onclick="cerrarRecipe()" class="bg-slate-500 text-white font-bold px-4 py-2 rounded text-xs">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- BANNER DE NOTIFICACIÓN -->
+    <div id="modalNotificacion" class="fixed bottom-4 right-4 bg-slate-900 text-teal-300 border border-teal-500/40 text-xs px-4 py-3 rounded shadow-xl hidden z-50">
+        <span id="mensajeNotificacion"></span>
+    </div>        
+
+    <!-- MODAL CAMBIAR CLAVE -->
+    <div id="modalClave" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-sm w-full p-5 space-y-3 shadow-2xl">
+            <h3 class="text-sm font-bold text-teal-300">Cambiar Contraseña de Sesión</h3>
+            <input type="password" id="nuevaClaveInput" placeholder="Nueva contraseña" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100">
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="document.getElementById('modalClave').classList.add('hidden')" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded">Cancelar</button>
+                <button onclick="guardarNuevaClave()" class="bg-teal-600 text-white text-xs px-3 py-1.5 rounded font-bold">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvSoV-D5itqZLNZs4UV2zkxT0lLloPShhehllO0Ji9raFiLWv7EVAUMqRYq7t1HdRV/exec";
+        let doctorActual = "";
+        let doctorCedulaActual = "";
+        let listaPacientes = [];
+        let pacienteSeleccionadoActual = null;
+
+        window.onload = function() {
+            verificarSesionActiva();
+            verificarAutomatizacion24Horas();
+            actualizarHoraDefecto();
+            iniciarCronometro24H();
+        };
+
+        // --- CLAVE ÚNICA DINÁMICA POR DISPOSITIVO / MÉDICO ---
+        function obtenerClaveStoragePacientes() {
+            const amb = (document.getElementById('ambulatorio').value || 'general').trim().toLowerCase().replace(/\s+/g, '_');
+            return `listaPacientesAmbulatorio_${doctorCedulaActual}_${amb}`;
+        }
+
+        function obtenerClaveStorageCabecera() {
+            return `cabeceraAmbulatorio_${doctorCedulaActual}`;
+        }
+
+        // --- CRONÓMETRO DE 24 HORAS ---
+        function iniciarCronometro24H() {
+            const claveTimestamp = 'timestampUltimoEnvio_' + (doctorCedulaActual || 'general');
+            let ultimoEnvio = localStorage.getItem(claveTimestamp);
+            const veinticuatroHorasMS = 24 * 60 * 60 * 1000;
+
+            if (!ultimoEnvio) {
+                ultimoEnvio = Date.now();
+                localStorage.setItem(claveTimestamp, ultimoEnvio);
+            }
+
+            setInterval(() => {
+                const ahora = Date.now();
+                const tiempoTranscurrido = ahora - parseInt(ultimoEnvio);
+                const tiempoRestante = veinticuatroHorasMS - tiempoTranscurrido;
+
+                const elementoReloj = document.getElementById('cronometroTurno');
+                if (!elementoReloj) return;
+
+                if (tiempoRestante <= 0) {
+                    elementoReloj.textContent = "00:00:00 - Sincronizando...";
+                    verificarAutomatizacion24Horas();
+                    return;
+                }
+
+                const horas = Math.floor((tiempoRestante % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutos = Math.floor((tiempoRestante % (1000 * 60 * 60)) / (1000 * 60));
+                const segundos = Math.floor((tiempoRestante % (1000 * 60)) / 1000);
+
+                elementoReloj.textContent = 
+                    String(horas).padStart(2, '0') + ":" + 
+                    String(minutos).padStart(2, '0') + ":" + 
+                    String(segundos).padStart(2, '0');
+            }, 1000);
+        }
+
+        // --- PANEL DE ADMINISTRACIÓN ---
+        function abrirModalAdmin() {
+            document.getElementById('adminPin').value = '';
+            document.getElementById('adminNuevaCedula').value = '';
+            document.getElementById('adminNuevoNombre').value = '';
+            document.getElementById('adminNuevaClave').value = '';
+            document.getElementById('modalAdmin').classList.remove('hidden');
+        }
+
+        function cerrarModalAdmin() {
+            document.getElementById('modalAdmin').classList.add('hidden');
+        }
+
+        function crearCuentaPorAdmin() {
+            const pin = document.getElementById('adminPin').value.trim();
+            const cedula = document.getElementById('adminNuevaCedula').value.trim();
+            const nombre = document.getElementById('adminNuevoNombre').value.trim();
+            const clave = document.getElementById('adminNuevaClave').value.trim();
+
+            if (pin !== "1234") {
+                alert("❌ PIN de Administrador incorrecto.");
+                return;
+            }
+
+            if (!cedula || !nombre || !clave) {
+                alert("⚠️ Por favor complete todos los campos de la cuenta.");
+                return;
+            }
+
+            let doctors = JSON.parse(localStorage.getItem('credencialesDoctoresPorCedula')) || {};
+            doctors[cedula] = { nombre: nombre, clave: clave };
+            localStorage.setItem('credencialesDoctoresPorCedula', JSON.stringify(doctors));
+
+            alert(`✅ Cuenta creada con éxito para el Dr(a). ${nombre} (Cédula: ${cedula}). Ya puede iniciar sesión.`);
+            cerrarModalAdmin();
+        }
+
+        // --- LOGIN DE MÉDICO ---
+        function iniciarSesionDoctor() {
+            const cedula = document.getElementById('loginCedula').value.trim();
+            const clave = document.getElementById('loginClave').value.trim();
+            let doctors = JSON.parse(localStorage.getItem('credencialesDoctoresPorCedula')) || {};
+
+            if (!cedula || !clave) {
+                alert("Ingrese Cédula y Contraseña");
+                return;
+            }
+
+            if (!doctors[cedula]) {
+                alert("⚠️ Esta Cédula no se encuentra registrada. Solicite al Administrador que cree su cuenta.");
+                return;
+            }
+
+            if (doctors[cedula].clave === clave) {
+                doctorActual = doctors[cedula].nombre;
+                doctorCedulaActual = cedula;
+                localStorage.setItem('doctorActualSesion', doctorActual);
+                localStorage.setItem('doctorActualCedula', cedula);
+                
+                document.getElementById('modalLogin').style.display = 'none';
+                document.getElementById('labelDoctorActivo').textContent = doctorActual;
+                document.getElementById('medico').value = doctorActual;
+
+                cargarDatosDoctor();
+                mostrarNotificacion("Bienvenido/a " + doctorActual);
+            } else {
+                alert("❌ Contraseña incorrecta.");
+            }
+        }
+
+        function verificarSesionActiva() {
+            const sesion = localStorage.getItem('doctorActualSesion');
+            const cedula = localStorage.getItem('doctorActualCedula');
+            if (sesion && cedula) {
+                doctorActual = sesion;
+                doctorCedulaActual = cedula;
+                document.getElementById('modalLogin').style.display = 'none';
+                document.getElementById('labelDoctorActivo').textContent = sesion;
+                cargarDatosDoctor();
+            } else {
+                document.getElementById('modalLogin').style.display = 'flex';
+            }
+        }
+
+        function cerrarSesionDoctor() {
+            localStorage.removeItem('doctorActualSesion');
+            localStorage.removeItem('doctorActualCedula');
+            location.reload();
+        }
+
+        function abrirModalCambiarClave() {
+            document.getElementById('nuevaClaveInput').value = '';
+            document.getElementById('modalClave').classList.remove('hidden');
+        }
+
+        function guardarNuevaClave() {
+            const nueva = document.getElementById('nuevaClaveInput').value.trim();
+            if (!nueva) { alert("Escriba una clave válida"); return; }
+
+            const claveTimestampCambio = 'ultimoCambioClave_' + doctorCedulaActual;
+            const ultimoCambio = localStorage.getItem(claveTimestampCambio);
+            const ahora = Date.now();
+            const treintaMinutosMS = 30 * 60 * 1000;
+
+            if (ultimoCambio) {
+                const tiempoTranscurrido = ahora - parseInt(ultimoCambio);
+                if (tiempoTranscurrido < treintaMinutosMS) {
+                    const minutosRestantes = Math.ceil((treintaMinutosMS - tiempoTranscurrido) / (60 * 1000));
+                    alert(`⏳ Por seguridad, debe esperar ${minutosRestantes} minuto(s) más para poder cambiar la contraseña nuevamente.`);
+                    return;
+                }
+            }
+
+            let doctors = JSON.parse(localStorage.getItem('credencialesDoctoresPorCedula')) || {};
+            if (doctors[doctorCedulaActual]) {
+                doctors[doctorCedulaActual].clave = nueva;
+                localStorage.setItem('credencialesDoctoresPorCedula', JSON.stringify(doctors));
+                localStorage.setItem(claveTimestampCambio, ahora);
+            }
+            
+            alert("✅ Contraseña actualizada con éxito.");
+            document.getElementById('modalClave').classList.add('hidden');
+        }
+
+        // --- CONTROL MENOR DE EDAD ---
+        function toggleMenorEdad() {
+            const isMenor = document.getElementById('pEsMenor').checked;
+            const cedulaInput = document.getElementById('cedula');
+            const helpText = document.getElementById('menorHelpText');
+
+            if (isMenor) {
+                cedulaInput.placeholder = "Cédula Repr. (Ej: 12345678)";
+                helpText.classList.remove('hidden');
+            } else {
+                cedulaInput.placeholder = "Cédula (Busca historial)";
+                helpText.classList.add('hidden');
+            }
+        }
+
+        // --- HISTORIAL RÁPIDO POR CÉDULA ---
+        function buscarHistorialPaciente() {
+            const cedulaIngresada = document.getElementById('cedula').value.trim();
+            if (cedulaIngresada.length < 6) return;
+
+            let historialGlobal = JSON.parse(localStorage.getItem('historialPacientesGlobal_' + doctorCedulaActual)) || [];
+            let pacienteEncontrado = historialGlobal.find(p => p.cedula === cedulaIngresada) || listaPacientes.find(p => p.cedula === cedulaIngresada);
+
+            if (pacienteEncontrado) {
+                document.getElementById('nombrePaciente').value = pacienteEncontrado.nombre || '';
+                document.getElementById('direccion').value = pacienteEncontrado.direccion || '';
+                document.getElementById('telefono').value = pacienteEncontrado.telefono || '';
+                if (pacienteEncontrado.fechaNacimiento) {
+                    document.getElementById('fechaNacimiento').value = pacienteEncontrado.fechaNacimiento;
+                    calcularEdadDesdeFecha();
+                } else if (pacienteEncontrado.edad) {
+                    document.getElementById('edad').value = pacienteEncontrado.edad;
+                }
+                if (pacienteEncontrado.sexo) {
+                    const radioSexo = document.querySelector(`input[name="sexo"][value="${pacienteEncontrado.sexo}"]`);
+                    if (radioSexo) radioSexo.checked = true;
+                }
+                mostrarNotificacion('📋 ¡Paciente encontrado en el historial!');
+            }
+        }
+
+        // --- RESPALDO DE SEGURIDAD (JSON) ---
+        function descargarRespaldoJSON() {
+            if (listaPacientes.length === 0) {
+                alert("⚠️ No hay pacientes en la lista actual para respaldar.");
+                return;
+            }
+            const fechaActual = document.getElementById('fechaTurno').value || 'respaldo';
+            const datosRespaldo = {
+                ambulatorio: document.getElementById('ambulatorio').value,
+                medico: document.getElementById('medico').value,
+                fecha: fechaActual,
+                pacientes: listaPacientes
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datosRespaldo, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `Respaldo_Morbilidad_${fechaActual}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            mostrarNotificacion('💾 Respaldo descargado con éxito.');
+        }
+
+        function restaurarRespaldoJSON(event) {
+            const archivo = event.target.files[0];
+            if (!archivo) return;
+
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                try {
+                    const contenido = JSON.parse(e.target.result);
+                    if (contenido.pacientes && Array.isArray(contenido.pacientes)) {
+                        if (confirm(`¿Deseas restaurar ${contenido.pacientes.length} pacientes del respaldo con fecha ${contenido.fecha}? Esto se sumará a tu turno actual.`)) {
+                            listaPacientes = listaPacientes.concat(contenido.pacientes);
+                            guardarPacientesEnStorage();
+                            renderizarTabla();
+                            mostrarNotificacion('📂 Respaldo restaurado correctamente.');
+                        }
+                    } else {
+                        alert("❌ El archivo seleccionado no tiene el formato de respaldo válido.");
+                    }
+                } catch (err) {
+                    alert("❌ Error al leer el archivo JSON.");
+                }
+                event.target.value = '';
+            };
+            lector.readAsText(archivo);
+        }
+
+        // --- AUTOMATIZACIÓN 24 HORAS ---
+        function verificarAutomatizacion24Horas() {
+            const claveTimestamp = 'timestampUltimoEnvio_' + (doctorCedulaActual || 'general');
+            let ultimoEnvio = localStorage.getItem(claveTimestamp);
+            const ahora = Date.now();
+            const veinticuatroHorasMS = 24 * 60 * 60 * 1000;
+
+            if (!ultimoEnvio) {
+                localStorage.setItem(claveTimestamp, ahora);
+                return;
+            }
+
+            if (ahora - parseInt(ultimoEnvio) >= veinticuatroHorasMS) {
+                if (listaPacientes.length > 0) {
+                    const pacientesSimplificados = obtenerPacientesOrdenados().map(p => ({
+                        nombre: p.nombre,
+                        cedula: p.cedula,
+                        fechaNacimiento: p.fechaNacimiento,
+                        edad: p.edad,
+                        sexo: p.sexo,
+                        direccion: p.direccion,
+                        telefono: p.telefono,
+                        especialidad: p.especialidad
+                    }));
+
+                    const datosAEnviar = {
+                        fecha: document.getElementById('fechaTurno').value,
+                        ambulatorio: document.getElementById('ambulatorio').value,
+                        medico: doctorActual, 
+                        dispositivoID: doctorCedulaActual + "_" + (document.getElementById('ambulatorio').value || 'general'),
+                        pacientes: pacientesSimplificados
+                    };
+
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(datosAEnviar)
+                    }).catch(err => console.error("Error en sincronización automática", err));
+
+                    mostrarNotificacion('⏰ Ciclo de 24 horas cumplido: Registros básicos enviados automáticamente.');
+                }
+                
+                listaPacientes = [];
+                guardarPacientesEnStorage();
+                localStorage.setItem(claveTimestamp, ahora);
+                renderizarTabla();
+            }
+        }
+
+        function enviarRecipeWhatsAppDirecto() {
+            if (!pacienteSeleccionadoActual) return;
+
+            let telefono = pacienteSeleccionadoActual.telefono.replace(/\D/g, '');
+            if (telefono.length < 10) {
+                alert("⚠️ Este paciente no tiene un número de teléfono válido registrado.");
+                return;
+            }
+
+            let nombreAmbulatorio = document.getElementById('ambulatorio').value || 'Ambulatorio de la Red';
+            let textoMensaje = `🏥 *${nombreAmbulatorio}*%0A` +
+                               `Estimado/a *${pacienteSeleccionadoActual.nombre}*, aquí tiene su récipe médico:%0A%0A` +
+                               `*Diagnóstico:* ${pacienteSeleccionadoActual.diagnostico}%0A` +
+                               `*Tratamiento:*%0A${pacienteSeleccionadoActual.tratamiento}`;
+
+            let urlWhatsApp = `https://wa.me/${telefono}?text=${textoMensaje}`;
+            window.open(urlWhatsApp, '_blank');
+            mostrarNotificacion('📱 WhatsApp abierto con las indicaciones.');
+        }
+
+        function enviarWhatsApp(telefono, nombre, diagnostico, tratamiento) {
+            let telefonoLimpio = telefono.replace(/\D/g, '');
+            let textoMensaje = `🏥 *Ambulatorio* %0A` +
+                               `Estimado/a *${nombre}*, le enviamos sus indicaciones médicas:%0A%0A` +
+                               `*Diagnóstico:* ${diagnostico}%0A` +
+                               `*Tratamiento / Indicaciones:*%0A${tratamiento}%0A%0A` +
+                               `¡Recobre su salud pronto!`;
+            window.open(`https://wa.me/${telefonoLimpio}?text=${textoMensaje}`, '_blank');
+        }
+
+        function cargarDatosDoctor() {
+            const cabecera = JSON.parse(localStorage.getItem(obtenerClaveStorageCabecera())) || {};
+            const hoy = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaTurno').value = cabecera.fecha || hoy;
+            document.getElementById('ambulatorio').value = cabecera.ambulatorio || '';
+            document.getElementById('medico').value = doctorActual || cabecera.medico || '';
+            document.getElementById('enfermeria').value = cabecera.enfermeria || '';
+
+            listaPacientes = JSON.parse(localStorage.getItem(obtenerClaveStoragePacientes())) || [];
+            renderizarTabla();
+        }
+
+        function guardarCabecera() {
+            const cabecera = {
+                fecha: document.getElementById('fechaTurno').value,
+                ambulatorio: document.getElementById('ambulatorio').value,
+                medico: document.getElementById('medico').value,
+                enfermeria: document.getElementById('enfermeria').value
+            };
+            localStorage.setItem(obtenerClaveStorageCabecera(), JSON.stringify(cabecera));
+        }
+
+        function guardarPacientesEnStorage() {
+            localStorage.setItem(obtenerClaveStoragePacientes(), JSON.stringify(listaPacientes));
+        }
+
+        function actualizarHoraDefecto() {
+            const ahora = new Date();
+            const hora = String(ahora.getHours()).padStart(2, '0');
+            const minutos = String(ahora.getMinutes()).padStart(2, '0');
+            document.getElementById('horaIngreso').value = `${hora}:${minutos}`;
+        }
+
+        function calcularEdadDesdeFecha() {
+            const fnac = document.getElementById('fechaNacimiento').value;
+            if (!fnac) return;
+            const fechaNac = new Date(fnac);
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - fechaNac.getFullYear();
+            const m = hoy.getMonth() - fechaNac.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < fechaNac.getDate())) {
+                edad--;
+            }
+            if (edad >= 0) {
+                document.getElementById('edad').value = edad;
+            }
+        }
+
+        function agregarPaciente(e) {
+            e.preventDefault();
+
+            const nombrePaciente = document.getElementById('nombrePaciente').value.trim();
+            let cedulaVal = document.getElementById('cedula').value.trim();
+            const telefonoVal = document.getElementById('telefono').value.trim();
+
+            if (!nombrePaciente || !cedulaVal) {
+                alert("⚠️ El Nombre, Apellido y la Cédula son obligatorios.");
+                return;
+            }
+
+            if (!/^\d{6,8}$/.test(cedulaVal) && !document.getElementById('pEsMenor').checked) {
+                alert("❌ La cédula debe contener exclusivamente números (entre 6 y 8 dígitos).");
+                document.getElementById('cedula').focus();
+                return;
+            }
+
+            if (telefonoVal.length > 0) {
+                if (telefonoVal.length !== 11) {
+                    alert("❌ El número de teléfono debe tener exactamente 11 dígitos.");
+                    document.getElementById('telefono').focus();
+                    return;
+                }
+
+                const validPrefixes = ['0414', '0424', '0412', '0416', '0426', '0212'];
+                const prefix = telefonoVal.substring(0, 4);
+                if (!validPrefixes.includes(prefix)) {
+                    alert("❌ El teléfono debe comenzar con una operadora válida (Ej: 0414, 0424, 0412, 0416, 0426).");
+                    document.getElementById('telefono').focus();
+                    return;
+                }
+            }
+
+            const isMenor = document.getElementById('pEsMenor').checked;
+            if (isMenor && !cedulaVal.includes('-H')) {
+                cedulaVal = cedulaVal + "-H1";
+            }
+
+            const sexoRadio = document.querySelector('input[name="sexo"]:checked');
+
+            const nuevoPaciente = {
+                id: Date.now(),
+                horaIngreso: document.getElementById('horaIngreso').value,
+                nombre: nombrePaciente,
+                cedula: cedulaVal,
+                fechaNacimiento: document.getElementById('fechaNacimiento').value,
+                edad: document.getElementById('edad').value.trim(),
+                sexo: sexoRadio ? sexoRadio.value : '',
+                peso: document.getElementById('peso').value.trim() || '-',
+                talla: document.getElementById('talla').value.trim() || '-',
+                gc: document.getElementById('gc').value.trim() || '-',
+                fc: document.getElementById('fc').value.trim() || '-',
+                spo2: document.getElementById('spo2').value.trim() || '-',
+                temp: document.getElementById('temp').value.trim() || '-',
+                pa: document.getElementById('pa').value.trim() || '-',
+                direccion: document.getElementById('direccion').value.trim() || '-',
+                telefono: telefonoVal || '-',
+                examenFisico: document.getElementById('examenFisico').value.trim() || 'Sin alteraciones',
+                diagnostico: document.getElementById('diagnostico').value.trim(),
+                tratamiento: document.getElementById('tratamiento').value.trim() || 'Sin indicaciones registradas',
+                especialidad: document.getElementById('especialidad').value,
+                horaSalida: document.getElementById('horaSalida').value || '-'
+            };
+
+            listaPacientes.push(nuevoPaciente);
+            guardarPacientesEnStorage();
+
+            let historialGlobal = JSON.parse(localStorage.getItem('historialPacientesGlobal_' + doctorCedulaActual)) || [];
+            if (!historialGlobal.some(p => p.cedula === nuevoPaciente.cedula)) {
+                historialGlobal.push(nuevoPaciente);
+                localStorage.setItem('historialPacientesGlobal_' + doctorCedulaActual, JSON.stringify(historialGlobal));
+            }
+
+            renderizarTabla();
+            mostrarNotificacion('✅ Paciente registrado con éxito');
+
+            document.getElementById('nombrePaciente').value = '';
+            document.getElementById('cedula').value = '';
+            document.getElementById('fechaNacimiento').value = '';
+            document.getElementById('edad').value = '';
+            document.getElementById('direccion').value = '';
+            document.getElementById('telefono').value = '';
+            document.getElementById('peso').value = '';
+            document.getElementById('talla').value = '';
+            document.getElementById('gc').value = '';
+            document.getElementById('fc').value = '';
+            document.getElementById('spo2').value = '';
+            document.getElementById('temp').value = '';
+            document.getElementById('pa').value = '';
+            document.getElementById('examenFisico').value = '';
+            document.getElementById('diagnostico').value = '';
+            document.getElementById('tratamiento').value = '';
+            document.getElementById('horaSalida').value = '';
+            document.getElementById('pEsMenor').checked = false;
+            document.getElementById('menorHelpText').classList.add('hidden');
+
+            if (sexoRadio) sexoRadio.checked = false;
+            actualizarHoraDefecto();
+            document.getElementById('cedula').focus();
+        }
+
+        function eliminarPaciente(id) {
+            if (confirm('¿Estás seguro de que deseas eliminar este paciente?')) {
+                listaPacientes = listaPacientes.filter(p => p.id !== id);
+                guardarPacientesEnStorage();
+                renderizarTabla();
+                mostrarNotificacion('🗑️ Registro eliminado');
+            }
+        }
+
+        function verRecipe(id) {
+            const p = listaPacientes.find(pac => pac.id === id);
+            if (!p) return;
+
+            pacienteSeleccionadoActual = p;
+
+            document.getElementById('recipeAmbulatorio').textContent = document.getElementById('ambulatorio').value || 'Ambulatorio de la Red';
+            document.getElementById('recipeFecha').textContent = document.getElementById('fechaTurno').value || '-';
+            document.getElementById('recipeMedico').textContent = document.getElementById('medico').value || doctorActual;
+            
+            document.getElementById('recipeNombre').textContent = p.nombre;
+            document.getElementById('recipeCedula').textContent = p.cedula;
+            document.getElementById('recipeEdad').textContent = p.edad + ' años';
+            document.getElementById('recipeSexo').textContent = p.sexo;
+            document.getElementById('recipeExamen').textContent = p.examenFisico || 'Sin hallazgos';
+            document.getElementById('recipeDiagnostico').textContent = p.diagnostico;
+            document.getElementById('recipeTratamiento').textContent = p.tratamiento;
+
+            const modalRecipe = document.getElementById('recipeImpresion');
+            modalRecipe.classList.remove('hidden');
+            modalRecipe.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cerrarRecipe() {
+            document.getElementById('recipeImpresion').classList.add('hidden');
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('cuerpoTablaPacientes');
+            document.getElementById('contadorPacientes').textContent = listaPacientes.length;
+
+            if (listaPacientes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-500 italic">No hay pacientes registrados en este turno.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = listaPacientes.map((p, index) => `
+                <tr class="hover:bg-slate-800/80 transition border-b border-slate-800 text-slate-200">
+                    <td class="p-2 text-center font-bold text-slate-400">${index + 1}</td>
+                    <td class="p-2 whitespace-nowrap">${p.horaIngreso}</td>
+                    <td class="p-2 font-semibold text-teal-200 whitespace-nowrap">${p.nombre}</td>
+                    <td class="p-2 whitespace-nowrap">${p.cedula}</td>
+                    <td class="p-2 whitespace-nowrap">${p.edad} años</td>
+                    <td class="p-2 text-center font-bold whitespace-nowrap ${p.sexo === 'M' ? 'text-blue-400' : 'text-pink-400'}">${p.sexo}</td>
+                    <td class="p-2 whitespace-nowrap text-[11px] text-teal-300">Ex: ${p.examenFisico} <br><span class="text-slate-400">${p.peso}kg / ${p.talla}cm / PA:${p.pa}</span></td>
+                    <td class="p-2 truncate max-w-xs text-slate-300">${p.direccion}</td>
+                    <td class="p-2 whitespace-nowrap font-medium text-emerald-400">${p.telefono}</td>
+                    <td class="p-2 font-medium text-slate-300">${p.diagnostico}</td>
+                    <td class="p-2 font-medium text-amber-200 max-w-xs truncate">${p.tratamiento}</td>
+                    <td class="p-2 whitespace-nowrap text-cyan-300">${p.especialidad}</td>
+                    <td class="p-2 text-center whitespace-nowrap">
+                        <button onclick="verRecipe(${p.id})" title="Ver Récipe" class="text-teal-400 hover:text-teal-200 font-bold px-1.5 py-0.5 rounded hover:bg-slate-700 mr-1">📄 Récipe</button>
+                        <button onclick="enviarWhatsApp('${p.telefono}', '${p.nombre}', '${p.diagnostico}', '${p.tratamiento}')" title="WhatsApp" class="text-emerald-400 hover:text-emerald-200 font-bold px-1.5 py-0.5 rounded hover:bg-slate-700 mr-1">📱 WA</button>
+                        <button onclick="eliminarPaciente(${p.id})" title="Eliminar" class="text-rose-400 hover:text-rose-200 font-bold px-1.5 py-0.5 rounded hover:bg-slate-700">✕</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function obtenerPacientesOrdenados() {
+            return [...listaPacientes].sort((a, b) => {
+                let espA = (a.especialidad || '').toUpperCase();
+                let espB = (b.especialidad || '').toUpperCase();
+                if (espA !== espB) return espA.localeCompare(espB);
+                let comA = (a.direccion || '').toUpperCase();
+                let comB = (b.direccion || '').toUpperCase();
+                return comA.localeCompare(comB);
+            });
+        }
+
+        // --- ENVÍO A GOOGLE SHEETS IDENTIFICADO POR DISPOSITIVO / AMBULATORIO ---
+        function enviarDirectoAGoogleSheets() {
+            if (listaPacientes.length === 0) {
+                mostrarNotificacion('⚠️ No hay pacientes registrados para enviar');
+                return;
+            }
+
+            const ambulatorioNombre = document.getElementById('ambulatorio').value.trim();
+            if (!ambulatorioNombre) {
+                alert("⚠️ Por favor ingrese el Nombre del Ambulatorio antes de enviar los datos.");
+                document.getElementById('ambulatorio').focus();
+                return;
+            }
+
+            mostrarNotificacion('⏳ Enviando datos y listas organizadas...');
+
+            const pacientesTraducidos = obtenerPacientesOrdenados().map(p => {
+                let sexoF = p.sexo === "F" ? "FEMENINO" : (p.sexo === "M" ? "MASCULINO" : p.sexo);
+                let gestanteF = p.gestante || "NO";
+
+                let catEdadF = "ADULTO";
+                let edadNum = parseInt(p.edad) || 0;
+                if (edadNum > 0 && edadNum < 18) catEdadF = "MENOR DE EDAD";
+                else if (edadNum >= 60) catEdadF = "ADULTO MAYOR";
+
+                return {
+                    digitalizado: "DIGITALIZADO",
+                    horas: "24 HORAS",
+                    nombre: p.nombre,
+                    cedula: p.cedula,
+                    edad: p.edad ? p.edad + " años" : "",
+                    direccion: p.direccion,
+                    especialidad: p.especialidad,
+                    sexo: sexoF,
+                    gestante: gestanteF,
+                    telefono: p.telefono,
+                    categoriaEdad: catEdadF
+                };
+            });
+
+            const identificadorEquipo = `${doctorCedulaActual}_${ambulatorioNombre.toLowerCase().replace(/\s+/g, '_')}`;
+
+            const datosAEnviar = {
+                fecha: document.getElementById('fechaTurno').value,
+                ambulatorio: ambulatorioNombre,
+                medico: document.getElementById('medico').value || doctorActual,
+                dispositivoID: identificadorEquipo,
+                pacientes: pacientesTraducidos
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datosAEnviar)
+            })
+            .then(() => {
+                mostrarNotificacion('🚀 ¡Éxito! El bloque de este dispositivo se envió correctamente.');
+            })
+            .catch(error => {
+                console.error(error);
+                mostrarNotificacion('❌ Ocurrió un error al enviar los datos.');
+            });
+        }
+
+        function mostrarNotificacion(msg) {
+            const modal = document.getElementById('modalNotificacion');
+            const texto = document.getElementById('mensajeNotificacion');
+            texto.textContent = msg;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
